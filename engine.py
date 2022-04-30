@@ -59,7 +59,7 @@ class Game:
                 # Render objects
                 self.screen.fill((0, 0, 0))
                 for obj in self.__objects:
-                    self.screen.blit(obj.get_image(), (obj.x, obj.y))
+                    self.screen.blit(obj.get_surface(), (obj.x, obj.y))
 
                 self.__last_update = time_now
                 
@@ -87,7 +87,7 @@ class Game:
             return False
 
     def update(self, time_elapsed):
-        pass
+        raise NotImplementedError
 
     def __init_event_dict(self):
         self.__key_event = {
@@ -254,23 +254,19 @@ class Game:
         }
 
 class Object:
-    def __init__(self, x, y, images):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
-        
-        self.__animations = {"still" : Animation(images, 1)}
-        self.set_default_animation("still")
-        self.special_anim = None
 
-        self.__time_elapsed = 0
         self.set_hor_direction(Direction.LEFT)
         self.set_ver_direction(Direction.UP)
 
     def get_width(self):
-        return self.get_image().get_width()
+        return self.get_surface().get_width()
 
-    def get_width(self):
-        return self.get_image().get_height()
+    def get_height(self):
+        return self.get_surface().get_height()
+
 
     def set_hor_direction(self, direction):
         self.__hor_direction = direction
@@ -278,14 +274,79 @@ class Object:
     def set_ver_direction(self, direction):
         self.__ver_direction = direction
 
-    def get_image(self):
-        flip_h = self.__hor_direction == Direction.RIGHT
-        flip_v = self.__ver_direction == Direction.DOWN
+    def get_hor_direction(self):
+        return self.__hor_direction
+
+    def get_ver_direction(self):
+        return self.__ver_direction
+
+    def get_surface(self):
+        raise NotImplementedError
+
+    def check_character_collision(self, object):
+        return self.check_rectangle_collision(object.x, object.y, object.get_width(), object.get_height())
+
+    def check_rectangle_collision(self, x, y, width, height):
+        hor = not(self.x > x+width or self.x + self.get_width() < x)
+        ver = not(self.y > y+height or self.y + self.get_height() < y)
+        return hor and ver
+
+
+class AnimatedObject(Object):
+    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1):
+        super().__init__(x, y)
+
+        self.__animations = {"still" : Animation(images, 1)}
+        self.set_default_animation("still")
+        self.special_anim = None
+
+        self.__time_elapsed = 0
+
+        self.velocity_x = velocity_x
+        self.velocity_y = velocity_y
+
+    def move_left(self, face_dir = True):
+        if(face_dir):
+            self.set_hor_direction(Direction.LEFT)
+        self.x -= self.velocity_x * self.get_time_elapsed()
+
+    def move_right(self, face_dir = True):
+        if(face_dir):
+            self.set_hor_direction(Direction.RIGHT)
+        self.x += self.velocity_x * self.get_time_elapsed()
+
+    def move_up(self, face_dir = True):
+        if(face_dir):
+            self.set_ver_direction(Direction.UP)
+        self.y -= self.velocity_y * self.get_time_elapsed()
+
+    def move_down(self, face_dir = True):
+        if(face_dir):
+            self.set_ver_direction(Direction.DOWN)
+        self.y += self.velocity_y * self.get_time_elapsed()
+
+    def move(self, face_dir = True):
+        if(self.velocity_x > 0 and face_dir):
+            self.set_ver_direction(Direction.LEFT)
+        elif(self.velocity_x < 0 and face_dir):
+            self.set_ver_direction(Direction.RIGHT)
+            
+        if(self.velocity_y > 0 and face_dir):
+            self.set_ver_direction(Direction.DOWN)
+        elif(self.velocity_y < 0 and face_dir):
+            self.set_ver_direction(Direction.UP)
+
+        self.x += self.velocity_x * self.get_time_elapsed()
+        self.y += self.velocity_y * self.get_time_elapsed()
+
+    def get_surface(self):
+        flip_h = self.get_hor_direction() == Direction.RIGHT
+        flip_v = self.get_ver_direction() == Direction.DOWN
         if(self.special_anim != None):
             return self.special_anim.get_image(flip_h, flip_v)
         else:
             return self.__default_anim.get_image(flip_h, flip_v)
-
+        
     def get_time_elapsed(self):
         return self.__time_elapsed
 
@@ -316,41 +377,48 @@ class Object:
             self.special_anim.stop()
             self.special_anim.repeat = times
 
-    def check_character_collision(self, object):
-        return self.check_rectangle_collision(object.get_x(), object.get_y(), object.get_width(), object.get_height())
 
-    def check_rectangle_collision(self, x, y, width, height):
-        hor = not(self.x > x+width or self.x + self.width < x)
-        ver = not(self.y > y+height or self.y + self.height < y)
-        return hor and ver
+class Text(Object):
+    def __init__(self, x, y, text, size=12, color=(255, 255, 255), antialias=True):
+        super().__init__(x, y)
 
+        self.__text = text
+        self.__render = True
+        self.__antialias = antialias
+        self.__color = color
 
-class Character(Object):
-    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1):
-        super().__init__(x, y, images)
+        self.__font = pygame.font.Font(pygame.font.get_default_font(), size)
 
-        self.velocity_x = velocity_x
-        self.velocity_y = velocity_y
-        
-    def move_left(self, face_dir = True):
-        if(face_dir):
-            self.set_hor_direction(Direction.LEFT)
-        self.x -= self.velocity_x * self.get_time_elapsed()
+    def get_text(self):
+        return self.__text
 
-    def move_right(self, face_dir = True):
-        if(face_dir):
-            self.set_hor_direction(Direction.RIGHT)
-        self.x += self.velocity_x * self.get_time_elapsed()
+    def set_text(self, text):
+        self.__render = True
+        self.__text = text
+    
+    def get_color(self):
+        return self.__color
 
-    def move_up(self, face_dir = True):
-        if(face_dir):
-            self.set_ver_direction(Direction.UP)
-        self.y -= self.velocity_y * self.get_time_elapsed()
+    def set_color(self, color):
+        self.__render = True
+        self.__color = color
 
-    def move_down(self, face_dir = True):
-        if(face_dir):
-            self.set_ver_direction(Direction.DOWN)
-        self.y += self.velocity_y * self.get_time_elapsed()
+    def get_antialias(self):
+        return self.__antialias
+
+    def set_antialias(self, antialias):
+        self.__antialias = antialias
+
+    def get_surface(self):
+        if(self.__render):
+            self.__text_surface = self.__font.render(self.__text, self.__antialias, self.__color)
+
+        flip_h = self.get_hor_direction() == Direction.RIGHT
+        flip_v = self.get_ver_direction() == Direction.DOWN
+        return pygame.transform.flip(self.__text_surface, flip_h, flip_v)
+
+    def update(self, time_lapsed):
+        pass
 
 class Animation:
     def __init__(self, images, speed, repeat = -1):
@@ -377,8 +445,8 @@ class Animation:
     def is_finished(self):
         return self.__finished
 
-    def get_image(self, flip_x, flip_y):
-        return pygame.transform.flip(self.__images[self.__current_img_i], flip_x, flip_y)
+    def get_image(self, flip_h, flip_v):
+        return pygame.transform.flip(self.__images[self.__current_img_i], flip_h, flip_v)
 
     def stop(self):
         self.__time = 0
