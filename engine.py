@@ -253,54 +253,41 @@ class Game:
             "z" : pygame.K_z,
         }
 
-class Character:
-    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1):
+class Object:
+    def __init__(self, x, y, images):
         self.x = x
         self.y = y
-        
-        self.width = images[0].get_width()
-        self.height = images[0].get_height()
-
-        self.velocity_x = velocity_x
-        self.velocity_y = velocity_y
         
         self.__animations = {"still" : Animation(images, 1)}
         self.set_default_animation("still")
         self.special_anim = None
 
         self.__time_elapsed = 0
+        self.set_hor_direction(Direction.LEFT)
+        self.set_ver_direction(Direction.UP)
 
-        self.__y_direction = Direction.UP
-        self.__x_direction = Direction.RIGHT
+    def get_width(self):
+        return self.get_image().get_width()
 
-        
-    def move_left(self, flip = True):
-        if(flip):
-            self.__x_direction = Direction.LEFT
-        self.x -= self.velocity_x * self.__time_elapsed
+    def get_width(self):
+        return self.get_image().get_height()
 
-    def move_right(self, flip = True):
-        if(flip):
-            self.__x_direction = Direction.RIGHT
-        self.x += self.velocity_x * self.__time_elapsed
+    def set_hor_direction(self, direction):
+        self.__hor_direction = direction
 
-    def move_up(self, flip = True):
-        if(flip):
-            self.__y_direction = Direction.UP
-        self.y -= self.velocity_y * self.__time_elapsed
-
-    def move_down(self, flip = True):
-        if(flip):
-            self.__y_direction = Direction.DOWN
-        self.y += self.velocity_y * self.__time_elapsed
+    def set_ver_direction(self, direction):
+        self.__ver_direction = direction
 
     def get_image(self):
-        flip_h = self.__x_direction == Direction.RIGHT
-        flip_v = self.__y_direction == Direction.DOWN
+        flip_h = self.__hor_direction == Direction.RIGHT
+        flip_v = self.__ver_direction == Direction.DOWN
         if(self.special_anim != None):
             return self.special_anim.get_image(flip_h, flip_v)
         else:
             return self.__default_anim.get_image(flip_h, flip_v)
+
+    def get_time_elapsed(self):
+        return self.__time_elapsed
 
     def update(self, time_elapsed):
         self.__time_elapsed = time_elapsed
@@ -320,24 +307,50 @@ class Character:
                 self.__default_anim.stop()
         except AttributeError:
             pass
-
         self.__default_anim = self.__animations[key]
         self.__default_anim.repeat = -1 # Repeat forever
 
-    def animate_x_times(self, key, x):
+    def play_animation(self, anim_key, times = 1):
         if(self.special_anim == None):
-            self.special_anim = self.__animations[key]
+            self.special_anim = self.__animations[anim_key]
             self.special_anim.stop()
-            self.special_anim.repeat = x
+            self.special_anim.repeat = times
 
-    def check_character_collision(self, character):
-        return self.check_rectangle_collision(character.get_x(), character.get_y(), character.width, character.height)
+    def check_character_collision(self, object):
+        return self.check_rectangle_collision(object.get_x(), object.get_y(), object.get_width(), object.get_height())
 
     def check_rectangle_collision(self, x, y, width, height):
         hor = not(self.x > x+width or self.x + self.width < x)
         ver = not(self.y > y+height or self.y + self.height < y)
         return hor and ver
 
+
+class Character(Object):
+    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1):
+        super().__init__(x, y, images)
+
+        self.velocity_x = velocity_x
+        self.velocity_y = velocity_y
+        
+    def move_left(self, face_dir = True):
+        if(face_dir):
+            self.set_hor_direction(Direction.LEFT)
+        self.x -= self.velocity_x * self.get_time_elapsed()
+
+    def move_right(self, face_dir = True):
+        if(face_dir):
+            self.set_hor_direction(Direction.RIGHT)
+        self.x += self.velocity_x * self.get_time_elapsed()
+
+    def move_up(self, face_dir = True):
+        if(face_dir):
+            self.set_ver_direction(Direction.UP)
+        self.y -= self.velocity_y * self.get_time_elapsed()
+
+    def move_down(self, face_dir = True):
+        if(face_dir):
+            self.set_ver_direction(Direction.DOWN)
+        self.y += self.velocity_y * self.get_time_elapsed()
 
 class Animation:
     def __init__(self, images, speed, repeat = -1):

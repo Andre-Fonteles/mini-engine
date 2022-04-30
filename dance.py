@@ -16,7 +16,7 @@ class WalkDanceGame(engine.Game):
         self.player1.add_animation("dance", [dance_1_img, dance_2_img], 1)
 
         self.add_object(self.player1)
-        self.add_object(engine.Character(0, 0, [dance_1_img, dance_2_img], 1/4, 1/4))
+        self.add_object(engine.Object(0, 0, [dance_1_img, dance_2_img]), 0)
 
     def update(self, time_elapsed):
         p1 = self.player1
@@ -37,8 +37,7 @@ class WalkDanceGame(engine.Game):
             moving = True
             
         if(self.key_pressed("space")):
-            p1.animate_x_times("dance", 1)
-
+            p1.play_animation("dance")
 
         if(moving):
             p1.set_default_animation("walking")
