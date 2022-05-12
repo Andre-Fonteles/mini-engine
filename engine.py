@@ -1,6 +1,5 @@
 import datetime
 from enum import Enum
-from timeit import repeat
 import pygame
 import pygame.locals
 
@@ -52,12 +51,12 @@ class Game:
             if((time_now - self.__last_update).microseconds >= 5000):
                 time_lapsed = (time_now - self.__last_update).microseconds/1000
                 for obj in self.__objects:
-                    obj.update(time_lapsed)
+                    obj.update(self, time_lapsed)
                 
                 self.update(time_lapsed)
                 
                 # Render objects
-                self.screen.fill((0, 0, 0))
+                self.screen.fill((100, 100, 100))
                 for obj in self.__objects:
                     self.screen.blit(obj.get_surface(), (obj.x, obj.y))
 
@@ -261,12 +260,17 @@ class Object:
         self.set_hor_direction(Direction.LEFT)
         self.set_ver_direction(Direction.UP)
 
+    def update(self, game, time_elapsed):
+        raise NotImplementedError
+
     def get_width(self):
-        return self.get_surface().get_width()
+        return self.get_rectangle()[2]
 
     def get_height(self):
-        return self.get_surface().get_height()
+        return self.get_rectangle()[3]
 
+    def get_rectangle(self):
+        return (self.x, self.y, self.get_surface().get_width(), self.get_surface().get_height())
 
     def set_hor_direction(self, direction):
         self.__hor_direction = direction
@@ -283,20 +287,24 @@ class Object:
     def get_surface(self):
         raise NotImplementedError
 
-    def check_character_collision(self, object):
-        return self.check_rectangle_collision(object.x, object.y, object.get_width(), object.get_height())
+    def check_object_collision(self, object):
+        return self.check_rectangle_collision(object.get_rectangle())
 
-    def check_rectangle_collision(self, x, y, width, height):
+    def check_rectangle_collision(self, rectangle):
+        x = rectangle[0]
+        y = rectangle[1]
+        width = rectangle[2]
+        height = rectangle[3]
         hor = not(self.x > x+width or self.x + self.get_width() < x)
         ver = not(self.y > y+height or self.y + self.get_height() < y)
         return hor and ver
 
 
 class AnimatedObject(Object):
-    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1):
+    def __init__(self, x, y, images, velocity_x = 1, velocity_y = 1, animation_speed = 1):
         super().__init__(x, y)
 
-        self.__animations = {"still" : Animation(images, 1)}
+        self.__animations = {"still" : Animation(images, animation_speed)}
         self.set_default_animation("still")
         self.special_anim = None
 
@@ -327,9 +335,9 @@ class AnimatedObject(Object):
 
     def move(self, face_dir = True):
         if(self.velocity_x > 0 and face_dir):
-            self.set_ver_direction(Direction.LEFT)
+            self.set_hor_direction(Direction.RIGHT)
         elif(self.velocity_x < 0 and face_dir):
-            self.set_ver_direction(Direction.RIGHT)
+            self.set_hor_direction(Direction.LEFT)
             
         if(self.velocity_y > 0 and face_dir):
             self.set_ver_direction(Direction.DOWN)
@@ -340,7 +348,7 @@ class AnimatedObject(Object):
         self.y += self.velocity_y * self.get_time_elapsed()
 
     def get_surface(self):
-        flip_h = self.get_hor_direction() == Direction.RIGHT
+        flip_h = self.get_hor_direction() == Direction.LEFT
         flip_v = self.get_ver_direction() == Direction.DOWN
         if(self.special_anim != None):
             return self.special_anim.get_image(flip_h, flip_v)
@@ -350,7 +358,7 @@ class AnimatedObject(Object):
     def get_time_elapsed(self):
         return self.__time_elapsed
 
-    def update(self, time_elapsed):
+    def update(self, game, time_elapsed):
         self.__time_elapsed = time_elapsed
         if(self.special_anim != None):
             self.special_anim.update(time_elapsed)
@@ -417,8 +425,34 @@ class Text(Object):
         flip_v = self.get_ver_direction() == Direction.DOWN
         return pygame.transform.flip(self.__text_surface, flip_h, flip_v)
 
-    def update(self, time_lapsed):
+    def update(self, game, time_lapsed):
         pass
+
+
+class Timer(Text):
+    def __init__(self, x, y, size=12, color=(255, 255, 255), antialias=True):
+        super().__init__(x, y, "0", size, color, antialias)
+        self.reset()
+        self.__running = True
+
+    def get_count(self):
+        return self.__time_in_sec
+
+    def reset(self):
+        self.__time_in_millis = 0
+        self.__time_in_sec = 0
+
+    def pause(self):
+        self.__running = False
+
+    def update(self, game, time_lapsed):
+        if(self.__running):
+            self.__time_in_millis += time_lapsed
+            time_in_sec = int(self.__time_in_millis // 1000)
+            if(time_in_sec > self.__time_in_sec):
+                self.__time_in_sec = time_in_sec
+                self.set_text(str(time_in_sec))
+
 
 class Animation:
     def __init__(self, images, speed, repeat = -1):
