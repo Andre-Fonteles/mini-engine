@@ -57,19 +57,23 @@ class DodgeGame(engine.Game):
         # Load player idle animation images
         idle_anim = []
         for i in range(1, 15):
-            img = pygame.transform.scale(pygame.image.load("girl/Idle ({0}).png".format(i)), (416/4, 454/4))
+            img = pygame.transform.scale(pygame.image.load("girl/Idle ({0}).png".format(i)), (416//4, 454//4))
             idle_anim.append(img)
 
         # Load player walking animation images
         walking_anim = []
         for i in range(1, 20):
+<<<<<<< HEAD
             img = pygame.transform.scale(pygame.image.load("girl/Run ({0}).png".format(i)), (416/4, 454/4))
+=======
+            img = pygame.transform.scale(pygame.image.load("girl/Walk ({0}).png".format(i)), (416//4, 454//4))
+>>>>>>> 7284cc1df78dce1b98555c0a42a08c0f8ff27be2
             walking_anim.append(img)
 
         # Load player dying animation images
         dying_anim =  []
         for i in range(1, 30):
-            img = pygame.transform.scale(pygame.image.load("girl/Dead ({0}).png".format(i)), (416/4, 454/4))
+            img = pygame.transform.scale(pygame.image.load("girl/Dead ({0}).png".format(i)), (416//4, 454//4))
             dying_anim.append(img)
 
         # Configure player
