@@ -348,7 +348,7 @@ class AnimatedObject(Object):
         self.y += self.velocity_y * self.get_time_elapsed()
 
     def get_surface(self):
-        flip_h = self.get_hor_direction() == Direction.LEFT
+        flip_h = self.get_hor_direction() == Direction.RIGHT
         flip_v = self.get_ver_direction() == Direction.DOWN
         if(self.special_anim != None):
             return self.special_anim.get_image(flip_h, flip_v)
